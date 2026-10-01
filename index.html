@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lists — shared checklists</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#1f2430; --muted:#6b7280;
+    --accent:#4f46e5; --accent-light:#eef2ff; --danger:#e11d48; --border:#e5e7eb;
+    --done:#9ca3af;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  header{background:var(--card);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:10;}
+  header h1{font-size:20px;margin:0;white-space:nowrap;}
+  header h1 span{color:var(--accent);}
+  .room-box{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-left:auto;flex-wrap:wrap;}
+  .room-box input{width:110px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
+  button{cursor:pointer;border:none;border-radius:7px;font-size:13px;padding:7px 12px;font-weight:600;transition:.15s;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#4338ca;}
+  .btn-ghost{background:var(--accent-light);color:var(--accent);}
+  .btn-ghost:hover{background:#e0e7ff;}
+  .btn-danger{background:#fee2e2;color:var(--danger);}
+  .btn-danger:hover{background:#fecaca;}
+  #banner{background:#fff7ed;border-bottom:1px solid #fed7aa;color:#92400e;padding:8px 20px;font-size:13px;text-align:center;}
+  #banner a{color:#92400e;text-decoration:underline;}
+  #banner.hidden{display:none;}
+  main{max-width:900px;margin:24px auto;padding:0 16px;}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+  .tab{background:var(--card);border:1px solid var(--border);padding:8px 14px;border-radius:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .tab .x{opacity:.5;font-weight:700;padding:0 2px;}
+  .tab .x:hover{opacity:1;}
+  .tab-add{background:var(--accent-light);color:var(--accent);border:1px dashed var(--accent);border-radius:20px;padding:8px 14px;font-size:13px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;}
+  .card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;}
+  .card-head input.title{font-size:18px;font-weight:700;border:none;background:transparent;flex:1;min-width:0;padding:4px 0;}
+  .card-head input.title:focus{outline:none;border-bottom:2px solid var(--accent);}
+  .progress-wrap{height:6px;background:var(--border);border-radius:4px;overflow:hidden;margin:10px 0 16px;}
+  .progress-bar{height:100%;background:var(--accent);width:0%;transition:width .2s;}
+  .meta{font-size:12px;color:var(--muted);}
+  ul.items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;}
+  li.item{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:8px;}
+  li.item:hover{background:#fafafa;}
+  li.item input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;cursor:pointer;}
+  li.item input.text{flex:1;border:none;background:transparent;font-size:14.5px;padding:4px 2px;color:var(--ink);min-width:0;}
+  li.item input.text:focus{outline:none;}
+  li.item.done input.text{color:var(--done);text-decoration:line-through;}
+  li.item .del{opacity:0;background:none;color:var(--muted);font-size:16px;padding:2px 6px;}
+  li.item:hover .del{opacity:.6;}
+  li.item .del:hover{opacity:1;color:var(--danger);}
+  .add-row{display:flex;gap:8px;margin-top:12px;}
+  .add-row input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;}
+  .empty{color:var(--muted);font-size:14px;padding:20px 0;text-align:center;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:50;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:12px;padding:20px;width:360px;max-width:90vw;}
+  .modal h3{margin:0 0 12px;font-size:16px;}
+  .tpl-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;}
+  .tpl-item{text-align:left;background:var(--accent-light);color:var(--ink);padding:10px 12px;border-radius:8px;font-size:13px;display:flex;justify-content:space-between;}
+  .tpl-item:hover{background:#e0e7ff;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:30px 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 <span>Lists</span></h1>
+  <div class="room-box">
+    <span>Room:</span>
+    <input id="roomInput" placeholder="room code" />
+    <button class="btn-ghost" id="joinBtn">Go</button>
+    <button class="btn-ghost" id="shareBtn">Copy share link</button>
+  </div>
+</header>
+
+<div id="banner" class="hidden"></div>
+
+<main>
+  <div class="tabs" id="tabs"></div>
+  <div class="card" id="listCard"></div>
+</main>
+
+<footer>Shared lists — data syncs live when Firebase is configured. See README for setup.</footer>
+
+<div class="modal-overlay" id="tplOverlay">
+  <div class="modal">
+    <h3>Start a new list</h3>
+    <div class="tpl-list" id="tplList"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="tplCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+/* =========================================================================
+   1) FIREBASE SETUP (optional, needed for live multi-user sharing)
+   -------------------------------------------------------------------------
+   Leave this as-is to run in LOCAL/SOLO mode (saved only in your browser).
+   To enable real-time sharing between people:
+     1. Go to https://console.firebase.google.com -> Add project (free).
+     2. Build -> Firestore Database -> Create database -> Start in TEST MODE.
+     3. Project settings (gear icon) -> General -> "Your apps" -> Web (</>) 
+        -> register app -> copy the firebaseConfig object shown.
+     4. Paste it below, replacing the placeholder object.
+     5. Commit + push to GitHub, enable GitHub Pages for the repo.
+   Everyone who opens the same page URL with the same "room" code will see
+   the same lists update live.
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCq8_Z5MVOxGrYwzVSF7kgCTQWo6cS90Ww",
+  authDomain: "lists-ffc91.firebaseapp.com",
+  projectId: "lists-ffc91",
+  storageBucket: "lists-ffc91.firebasestorage.app",
+  messagingSenderId: "775551082555",
+  appId: "1:775551082555:web:c67ec30f4a205b7badfc1e"
+};
+
+const FIREBASE_CONFIGURED = firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY";
+let db = null;
+if (FIREBASE_CONFIGURED) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+}
+
+/* ========================================================================= */
+
+const TEMPLATES = {
+  "Grocery List": ["Milk","Eggs","Bread","Fruit & veg","Chicken","Rice","Coffee","Snacks"],
+  "Packing List": ["Passport / ID","Phone charger","Toothbrush","Clothes","Medications","Headphones","Wallet"],
+  "To-Do Today": ["Check emails","Top priority task","Reply to messages","Plan tomorrow"],
+  "Chores": ["Vacuum","Dishes","Laundry","Take out trash","Clean bathroom","Wipe counters"],
+  "Movie / Show Watchlist": ["Add your first pick here"],
+  "Books to Read": ["Add your first book here"],
+  "Project Tasks": ["Define scope","Assign owners","Set deadline","Review & ship"],
+  "Gift Ideas": ["Add a gift idea here"],
+  "Blank list": []
+};
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function getRoomFromUrl(){
+  const p = new URLSearchParams(location.search);
+  return p.get('room');
+}
+function setRoomInUrl(room){
+  const p = new URLSearchParams(location.search);
+  p.set('room', room);
+  history.replaceState(null, '', location.pathname + '?' + p.toString());
+}
+
+let state = { lists: [], activeId: null };
+let room = getRoomFromUrl();
+let unsub = null;
+let saveTimer = null;
+
+function localKey(){ return 'listsapp:' + (room || 'default'); }
+
+function defaultState(){
+  const id = uid();
+  return { lists: [{ id, title:"My List", items: [] }], activeId: id };
+}
+
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(localKey());
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return defaultState();
+}
+function saveLocal(){
+  localStorage.setItem(localKey(), JSON.stringify(state));
+}
+
+function ensureRoom(){
+  if(!room){
+    room = uid();
+    setRoomInUrl(room);
+  }
+  document.getElementById('roomInput').value = room;
+}
+
+function showBanner(){
+  const b = document.getElementById('banner');
+  if(FIREBASE_CONFIGURED){
+    b.classList.add('hidden');
+    return;
+  }
+  b.classList.remove('hidden');
+  b.innerHTML = 'Running in <strong>solo/local mode</strong> — changes stay only in this browser. '
+    + 'Add a Firebase config in index.html to sync &amp; share live between people. See the README.';
+}
+
+function render(){
+  renderTabs();
+  renderCard();
+}
+
+function renderTabs(){
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  state.lists.forEach(list => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (list.id === state.activeId ? ' active' : '');
+    el.innerHTML = `<span class="tab-label">${escapeHtml(list.title || 'Untitled')}</span><span class="x" data-id="${list.id}">✕</span>`;
+    el.querySelector('.tab-label').onclick = () => { state.activeId = list.id; persist(); render(); };
+    el.querySelector('.x').onclick = (e) => {
+      e.stopPropagation();
+      if(state.lists.length === 1){ alert("You need at least one list."); return; }
+      if(!confirm(`Delete list "${list.title}"?`)) return;
+      state.lists = state.lists.filter(l => l.id !== list.id);
+      if(state.activeId === list.id) state.activeId = state.lists[0].id;
+      persist(); render();
+    };
+    tabs.appendChild(el);
+  });
+  const add = document.createElement('button');
+  add.className = 'tab-add';
+  add.textContent = '+ New list';
+  add.onclick = openTemplateModal;
+  tabs.appendChild(add);
+}
+
+function renderCard(){
+  const card = document.getElementById('listCard');
+  const list = state.lists.find(l => l.id === state.activeId) || state.lists[0];
+  if(!list){ card.innerHTML = ''; return; }
+  const total = list.items.length;
+  const done = list.items.filter(i => i.done).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+
+  card.innerHTML = `
+    <div class="card-head">
+      <input class="title" value="${escapeHtml(list.title)}" />
+      <span class="meta">${done}/${total} done</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+    <ul class="items" id="itemsUl"></ul>
+    ${total === 0 ? '<div class="empty">No items yet — add one below.</div>' : ''}
+    <div class="add-row">
+      <input id="newItemInput" placeholder="Add an item and press Enter…" />
+      <button class="btn-primary" id="addItemBtn">Add</button>
+    </div>
+  `;
+
+  card.querySelector('.title').onchange = (e) => {
+    list.title = e.target.value.trim() || 'Untitled';
+    persist(); renderTabs();
+  };
+
+  const ul = card.querySelector('#itemsUl');
+  list.items.forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'item' + (item.done ? ' done' : '');
+    li.innerHTML = `
+      <input type="checkbox" ${item.done ? 'checked' : ''} />
+      <input class="text" value="${escapeHtml(item.text)}" />
+      <button class="del">✕</button>
+    `;
+    li.querySelector('input[type=checkbox]').onchange = (e) => {
+      item.done = e.target.checked; persist(); renderCard();
+    };
+    li.querySelector('.text').onchange = (e) => {
+      item.text = e.target.value; persist();
+    };
+    li.querySelector('.del').onclick = () => {
+      list.items = list.items.filter(i => i.id !== item.id);
+      persist(); renderCard();
+    };
+    ul.appendChild(li);
+  });
+
+  const addBtn = card.querySelector('#addItemBtn');
+  const input = card.querySelector('#newItemInput');
+  function addItem(){
+    const v = input.value.trim();
+    if(!v) return;
+    list.items.push({ id: uid(), text: v, done: false });
+    input.value = '';
+    persist(); renderCard();
+    card.querySelector('#newItemInput').focus();
+  }
+  addBtn.onclick = addItem;
+  input.onkeydown = (e) => { if(e.key === 'Enter') addItem(); };
+}
+
+function openTemplateModal(){
+  const overlay = document.getElementById('tplOverlay');
+  const list = document.getElementById('tplList');
+  list.innerHTML = '';
+  Object.keys(TEMPLATES).forEach(name => {
+    const b = document.createElement('button');
+    b.className = 'tpl-item';
+    b.innerHTML = `<span>${escapeHtml(name)}</span><span>＋</span>`;
+    b.onclick = () => {
+      const items = TEMPLATES[name].map(t => ({ id: uid(), text: t, done: false }));
+      const newList = { id: uid(), title: name, items };
+      state.lists.push(newList);
+      state.activeId = newList.id;
+      persist(); render();
+      overlay.classList.remove('show');
+    };
+    list.appendChild(b);
+  });
+  overlay.classList.add('show');
+}
+document.getElementById('tplCancel').onclick = () => document.getElementById('tplOverlay').classList.remove('show');
+
+function persist(){
+  saveLocal();
+  if(FIREBASE_CONFIGURED && db){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      db.collection('rooms').doc(room).set(state).catch(console.error);
+    }, 250);
+  }
+}
+
+function initSync(){
+  if(FIREBASE_CONFIGURED && db){
+    if(unsub) unsub();
+    unsub = db.collection('rooms').doc(room).onSnapshot(snap => {
+      if(snap.exists){
+        const remote = snap.data();
+        if(JSON.stringify(remote) !== JSON.stringify(state)){
+          state = remote;
+          render();
+        }
+      } else {
+        state = defaultState();
+        db.collection('rooms').doc(room).set(state);
+      }
+    }, err => {
+      console.error(err);
+      showBanner();
+    });
+  } else {
+    state = loadLocal();
+    render();
+  }
+}
+
+document.getElementById('shareBtn').onclick = () => {
+  navigator.clipboard.writeText(location.href).then(() => {
+    const b = document.getElementById('shareBtn');
+    const old = b.textContent;
+    b.textContent = 'Copied!';
+    setTimeout(() => b.textContent = old, 1500);
+  });
+};
+document.getElementById('joinBtn').onclick = () => {
+  const v = document.getElementById('roomInput').value.trim();
+  if(!v) return;
+  room = v;
+  setRoomInUrl(room);
+  initSync();
+};
+
+ensureRoom();
+showBanner();
+initSync();
+</script>
+</body>
+</html>
